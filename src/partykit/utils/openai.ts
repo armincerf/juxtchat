@@ -22,7 +22,7 @@ export async function getChatCompletionResponse(params: Params) {
     const openai = new OpenAI({ apiKey });
 
     const openAIParams: OpenAI.Chat.ChatCompletionCreateParams = {
-      model: "gpt-3.5-turbo",
+      model: "gpt-4",
       stream: true,
       messages,
     };

@@ -33,7 +33,7 @@ export default function Settings({
   };
 
   return (
-    <div className="z-20 backdrop-blur-sm flex flex-col gap-8 items-center justify-center w-full h-full bg-black/50 text-white font-4xl">
+    <div className="z-20 p-4 backdrop-blur-sm flex flex-col gap-8 items-center justify-center w-full h-full bg-black/50 text-white font-4xl">
       <form className="flex flex-row gap-4" onSubmit={handleSubmit}>
         <input
           ref={nameInputRef}
@@ -48,38 +48,12 @@ export default function Settings({
           className="p-4 text-xl bg-green-300/90 hover:bg-white text-green-900 disabled:bg-gray-200 disabled:text-gray-400 disabled:hover:bg-gray-200 disabled:hover:text-gray-400"
           disabled={nameInput === ""}
         >
-          Change Name
+          Set Name
         </button>
       </form>
       <button onClick={dismiss} className="underline text-white/80">
         Cancel
       </button>
-      <div className="fixed bottom-0 left-0 w-full">
-        <div className="flex flex-row justify-center pb-8 gap-6 text-white/80">
-          <div>
-            Made with{" "}
-            <Link className="underline" href="https://partykit.io">
-              PartyKit
-            </Link>
-          </div>
-          <div>
-            <Link
-              className="underline"
-              href="https://github.com/partykit/sketch-spatial-chat"
-            >
-              GitHub
-            </Link>
-          </div>
-          <div>
-            <Link
-              className="underline"
-              href="https://blog.partykit.io/posts/thinking-hats-and-spatial-chat"
-            >
-              More info
-            </Link>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -11,7 +11,9 @@ import Settings from "./components/Settings";
 import Avatar from "./components/Avatar";
 import SettingsCTA from "./components/SettingsCTA";
 
-import { RoomMap, type RoomName, DEFAULT_ROOM, type User } from "@/shared";
+import { useSearchParams, useRouter } from "next/navigation";
+
+import { RoomMap, type RoomName, type User } from "@/shared";
 
 // In units
 
@@ -44,17 +46,27 @@ const makeUser = (name: string) => {
 };
 
 export default function Page() {
-  const [currentRoom, setCurrentRoom] = useState(DEFAULT_ROOM);
-  const [previousRoom, setPreviousRoom] = useState(DEFAULT_ROOM);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const currentRoom = searchParams.get("room") ?? "clojure_room";
+  const setCurrentRoom = (room: RoomName) => {
+    router.push(`?room=${room}`);
+  };
+
+  const [previousRoom, setPreviousRoom] = useState(currentRoom);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
     const name = window.localStorage.getItem("spatial-chat:name");
     if (name) {
       setUser(makeUser(name));
+    } else {
+      setShowSettings(true);
     }
+    setInitialLoad(false);
   }, []);
 
   const handleRoomChange = (transitioningToRoom: RoomName) => {
@@ -77,8 +89,13 @@ export default function Page() {
       <div
         className={showSettings ? "pointer-events-none overscroll-none" : ""}
       >
-        {!user && <SettingsCTA showSettings={() => setShowSettings(true)} />}
-        <div className="absolute top-0 right-0 p-12 z-10">
+        {!initialLoad && !user && (
+          <SettingsCTA
+            settingsOpen={showSettings}
+            showSettings={() => setShowSettings(true)}
+          />
+        )}
+        <div className="absolute top-0 right-0 p-2 z-10">
           <div onClick={() => setShowSettings(true)} className="cursor-pointer">
             {user !== null ? (
               <Avatar initials={user.initials} variant="highlight" />

@@ -6,6 +6,10 @@ import { useUsers, useSelf } from "y-presence";
 import Avatar from "./Avatar";
 import ClearRoom from "./ClearRoom";
 import { useSyncedStore } from "@syncedstore/react";
+import Markdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import AddRoom from "./AddRoom";
+import { Y, getYjsValue } from "@syncedstore/core";
 
 export default function Room() {
   const {
@@ -16,8 +20,20 @@ export default function Room() {
   } = useRoomContext();
   const [messageInput, setMessageInput] = useState("");
   const store = useSyncedStore(globalStore);
-  const [doReply, setDoReply] = useState(false);
   const chatListRef = useRef(null);
+
+  const handleDeleteMessage = (message: Message) => {
+    const messages = getYjsValue(store.messages) as Y.Array<Y.Map<Message>>;
+    console.log(messages);
+    if (!messages) return;
+    const index = messages.toArray().findIndex((m) => {
+      const mes = m.toJSON() as Message;
+      return mes.text === message.text && mes.userId === message.userId;
+    });
+    console.log(index);
+    if (index === -1) return;
+    messages.delete(index, 1);
+  };
 
   const users = useUsers(provider!.awareness);
   const self = useSelf(provider!.awareness);
@@ -57,7 +73,7 @@ export default function Room() {
 
   return (
     <div className="h-full max-h-full flex flex-col justify-between">
-      <div className="absolute top-0 right-0 p-4 justify-end flex flex-row -space-x-2">
+      <div className="absolute -top-8 -right-8 p-4 justify-end flex flex-row -space-x-2">
         {npc && <Avatar initials={npc.name} variant="npc" />}
         {Array.from(users.entries())
           .sort()
@@ -77,17 +93,18 @@ export default function Room() {
           <div className="prose">
             <h1>{title}</h1>
           </div>
-          {self?.name && <ClearRoom />}
         </div>
         {room?.subtitle && (
           <h4 className="text-black/50 font-semibold text-lg w-2/3">
             {room.subtitle}
           </h4>
         )}
+
+        {self?.name && self.name === "Alex" && <ClearRoom />}
       </div>
       <div
         id="chat"
-        className="h-full max-h-full overflow-hidden w-3/4 px-4 pb-4 flex flex-col gap-6 justify-between items-stretch"
+        className="h-full max-h-full overflow-hidden w-full sm:w-3/4 px-4 pb-4 flex flex-col gap-6 justify-between items-stretch"
       >
         <div
           ref={chatListRef}
@@ -103,7 +120,7 @@ export default function Room() {
                     key={index}
                     className={classNames(
                       "flex justify-start items-end gap-2",
-                      isMe ? "flex-row-reverse" : "flex-row"
+                      isMe ? "flex-row-reverse" : "flex-row",
                     )}
                   >
                     <div className="grow-0">
@@ -112,14 +129,22 @@ export default function Room() {
                         variant={message.isNpc ? "small-npc" : "small"}
                       />
                     </div>
-                    <div className="px-3 py-1 bg-white rounded-2xl flex flex-col">
-                      {message.text
-                        .split("\n")
-                        .map((line: string, index: number) => {
-                          return <span key={index}>{line}</span>;
-                        })}
+                    <div className="prose-sm lg:prose leading-snug px-3 py-1 bg-white rounded-2xl flex flex-col">
+                      <Markdown rehypePlugins={[rehypeHighlight]} key={index}>
+                        {message.text}
+                      </Markdown>
                     </div>
                     <div className="grow-0 w-3"></div>
+                    {(isMe || self?.name === "Alex") && (
+                      <button
+                        className="text-black/50 hover:text-black/80"
+                        onClick={() => {
+                          handleDeleteMessage(message);
+                        }}
+                      >
+                        delete
+                      </button>
+                    )}
                   </li>
                 );
               })}
@@ -128,7 +153,7 @@ export default function Room() {
         {self?.name && (
           <form
             onSubmit={handleSubmit}
-            className="w-full flex flex-row space-x-2"
+            className="w-3/4 sm:w-full flex flex-row space-x-2"
           >
             <input
               type="text"
