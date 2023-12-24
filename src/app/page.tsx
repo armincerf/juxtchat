@@ -14,6 +14,8 @@ import SettingsCTA from "./components/SettingsCTA";
 import { useSearchParams, useRouter } from "next/navigation";
 
 import { RoomMap, type RoomName, type User } from "@/shared";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { ButtonScrollToBottom } from "./components/ChatPanel";
 
 // In units
 
@@ -78,7 +80,7 @@ export default function Page() {
   const custom = { source: previousRoom, destination: currentRoom };
 
   return (
-    <main className="relative min-h-screen h-screen max-h-screen flex flex-col bg-gray-800">
+    <main className="relative h-[100dvh] flex flex-col bg-gray-800">
       {showSettings && (
         <Settings
           name={user?.name ?? null}
@@ -127,7 +129,9 @@ export default function Page() {
                       name={roomName as RoomName}
                       currentUser={user}
                     >
-                      <Room />
+                      <TooltipProvider>
+                        <Room />
+                      </TooltipProvider>
                     </RoomContextProvider>
                   </AnimatedRoomContainer>
                 )

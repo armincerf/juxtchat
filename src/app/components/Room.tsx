@@ -1,15 +1,21 @@
 import classNames from "classnames";
-import { useEffect, useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { useRoomContext } from "@/app/providers/room-context";
 import { RoomMap, Message } from "@/shared";
 import { useUsers, useSelf } from "y-presence";
 import Avatar from "./Avatar";
 import ClearRoom from "./ClearRoom";
 import { useSyncedStore } from "@syncedstore/react";
-import Markdown from "react-markdown";
-import rehypeHighlight from "rehype-highlight";
-import AddRoom from "./AddRoom";
 import { Y, getYjsValue } from "@syncedstore/core";
+import { ChatScrollAnchor } from "./chat-scroll-anchor";
+import { ChatMessage } from "./Messages";
+import { Separator } from "./ui/seperator";
+import {
+  ButtonScrollToBottom,
+  ChatPanel,
+  type ChatPanelProps,
+} from "./ChatPanel";
+import { uploadFiles } from "./utils";
 
 export default function Room() {
   const {
@@ -23,6 +29,7 @@ export default function Room() {
   const chatListRef = useRef(null);
 
   const handleDeleteMessage = (message: Message) => {
+    if (!store) return;
     const messages = getYjsValue(store.messages) as Y.Array<Y.Map<Message>>;
     console.log(messages);
     if (!messages) return;
@@ -42,38 +49,58 @@ export default function Room() {
   const npc = room?.npc;
   const title = room?.title;
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!self) return;
-    if (!messageInput) return;
+  const handleSubmit: ChatPanelProps["append"] = (message: string) => {
+    if (!self || !message || !store) return;
 
-    const message = {
+    const newMessage = {
       userId: currentUserId,
       name: self.name,
       initials: self.initials,
-      text: messageInput,
+      text: message,
       isNpc: false,
       seenByNpc: false,
     } as Message;
 
-    store.messages.push(message);
+    store.messages.push(newMessage);
     setMessageInput("");
   };
+  const handleImageUpload: ChatPanelProps["handleImageUpload"] = async (
+    value,
+    file,
+  ) => {
+    if (!self || !store) return;
+    const pendingImageText = "Processing image...";
+    const newMessage = {
+      userId: currentUserId,
+      name: self.name,
+      initials: self.initials,
+      text: pendingImageText,
+      isNpc: false,
+      seenByNpc: false,
+    } as Message;
+    store.messages.push(newMessage);
+    store.state.image = value;
+    const imageUploadRes = await uploadFiles("imageUploader", {
+      files: [file],
+    });
+    if (!imageUploadRes) return;
+    const url = imageUploadRes[0].url;
+    const imageUploadedMsg = store.messages.find(
+      (m) => m.text === pendingImageText,
+    );
+    if (!imageUploadedMsg) return;
+    imageUploadedMsg.text = `![image](${url})`;
+  };
 
-  useEffect(() => {
-    if (chatListRef.current) {
-      // Scroll to bottom
-      const element = chatListRef.current as unknown as HTMLDivElement;
-      element.scrollTop = element.scrollHeight;
-    }
-  }, [store.messages]);
+  const isLoading = store?.state.isTyping;
+  if (isLoading) console.log("loading");
 
   if (!provider) return null;
   if (!room) return null;
 
   return (
-    <div className="h-full max-h-full flex flex-col justify-between">
-      <div className="absolute -top-8 -right-8 p-4 justify-end flex flex-row -space-x-2">
+    <div className="h-full flex flex-col justify-start items-center">
+      <div className="absolute top-0 right-0 p-2 justify-end flex flex-row -space-x-2">
         {npc && <Avatar initials={npc.name} variant="npc" />}
         {Array.from(users.entries())
           .sort()
@@ -102,74 +129,70 @@ export default function Room() {
 
         {self?.name && self.name === "Alex" && <ClearRoom />}
       </div>
+
       <div
         id="chat"
-        className="h-full max-h-full overflow-hidden w-full sm:w-3/4 px-4 pb-4 flex flex-col gap-6 justify-between items-stretch"
+        className="h-full relative max-h-full overflow-hidden sm:w-3/4 lg:max-w-screen-xl sm:px-4 flex flex-col gap-6 justify-between items-stretch"
       >
         <div
           ref={chatListRef}
-          className="grow h-full max-h-full overflow-y-scroll"
+          className="overflow-y-scroll pt-2 pb-24 relative"
         >
-          <ul className="flex flex-col-reverse h-full gap-y-2 justify-end p-1">
-            {store.messages
-              .toReversed()
-              .map((message: Message, index: number) => {
-                const isMe = currentUserId === message.userId;
-                return (
-                  <li
-                    key={index}
-                    className={classNames(
-                      "flex justify-start items-end gap-2",
-                      isMe ? "flex-row-reverse" : "flex-row",
-                    )}
-                  >
-                    <div className="grow-0">
-                      <Avatar
-                        initials={message.initials}
-                        variant={message.isNpc ? "small-npc" : "small"}
-                      />
-                    </div>
-                    <div className="prose-sm lg:prose leading-snug px-3 py-1 bg-white rounded-2xl flex flex-col">
-                      <Markdown rehypePlugins={[rehypeHighlight]} key={index}>
-                        {message.text}
-                      </Markdown>
-                    </div>
-                    <div className="grow-0 w-3"></div>
-                    {(isMe || self?.name === "Alex") && (
-                      <button
-                        className="text-black/50 hover:text-black/80"
-                        onClick={() => {
+          {store ? (
+            <ul className="relative px-4">
+              {store.messages
+                .filter((message) => message.text !== "@bot")
+                .map((message: Message, index: number) => {
+                  const isMe = currentUserId === message.userId;
+                  return (
+                    <li key={index}>
+                      <ChatMessage
+                        canDelete={isMe || self?.name === "Alex"}
+                        onDelete={() => {
                           handleDeleteMessage(message);
                         }}
-                      >
-                        delete
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-          </ul>
+                        message={{
+                          id: index.toString(),
+                          content: message.text,
+                          name: message.initials,
+                          role: message.isNpc ? "assistant" : "user",
+                        }}
+                      />
+                      <div className="grow-0 w-3"></div>
+                    </li>
+                  );
+                })}
+              <ChatScrollAnchor
+                messageElRef={chatListRef}
+                lastMessageLength={
+                  !store.messages.length
+                    ? 0
+                    : store.messages[store.messages.length - 1].text.length
+                }
+                trackVisibility={isLoading}
+              />
+            </ul>
+          ) : null}
         </div>
+        {store?.messages.length ? (
+          <ButtonScrollToBottom messageElRef={chatListRef} />
+        ) : null}
         {self?.name && (
-          <form
-            onSubmit={handleSubmit}
-            className="w-3/4 sm:w-full flex flex-row space-x-2"
-          >
-            <input
-              type="text"
-              value={messageInput}
-              className="p-1 w-full"
-              onChange={(e) => {
-                setMessageInput(e.target.value);
-              }}
-            />
-            <button
-              type="submit"
-              className="px-2 py-1 bg-white/60 hover:bg-white"
-            >
-              Send
-            </button>
-          </form>
+          <ChatPanel
+            handleImageUpload={handleImageUpload}
+            title={title}
+            isLoading={!!isLoading}
+            stop={() => {
+              console.log("stop");
+            }}
+            append={handleSubmit}
+            input={messageInput}
+            setInput={setMessageInput}
+            handleAskAi={() => {
+              handleSubmit("@bot");
+            }}
+            aiName={npc?.name ?? "AI"}
+          />
         )}
       </div>
     </div>

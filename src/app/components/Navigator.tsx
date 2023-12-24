@@ -74,7 +74,7 @@ export default function Navigator(props: {
     "w-10 h-10 bg-white shadow-md hover:bg-black hover:text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:hover:bg-gray-200 disabled:hover:text-gray-400 flex items-center justify-center text-2xl";
 
   return (
-    <div className="absolute bottom-0 right-0 py-2 sm:p-4 z-10">
+    <div className="absolute bottom-14 right-0 py-2 sm:p-4 z-10">
       <div className="grid grid-cols-3 grid-rows-3 place-content-center">
         <div></div>
         <Button

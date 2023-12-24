@@ -3,9 +3,9 @@
 import { useState, useEffect, createContext, useContext, useMemo } from "react";
 
 import YPartyKitProvider from "y-partykit/provider";
-import { syncedStore } from "@syncedstore/core";
+import { Y, syncedStore } from "@syncedstore/core";
 import { Doc } from "yjs";
-import { type User, yDocShape } from "@/shared";
+import { type User, yDocShape, Message } from "@/shared";
 
 import {
   useUsers as yPresenceUseUsers,
@@ -15,7 +15,7 @@ import {
 interface RoomContextType {
   provider: YPartyKitProvider | null;
   name: string;
-  store: any | null;
+  store: typeof yDocShape | null;
   currentUserId: string | null;
 }
 
@@ -38,7 +38,7 @@ export default function RoomContextProvider(props: {
   const { name, currentUser } = props;
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [doc] = useState(new Doc());
+  const [doc] = useState<Y.Doc>(new Doc());
   /*const [provider, setProvider] = useState<YPartyKitProvider>(
     new YPartyKitProvider("localhost:1999", name, doc, { connect: false })
   );*/
@@ -50,11 +50,11 @@ export default function RoomContextProvider(props: {
       doc,
       {
         connect: false,
-      }
+      },
     );
   }, [name, doc]);
 
-  const [store, setStore] = useState(syncedStore(yDocShape, doc));
+  const [store] = useState(syncedStore(yDocShape, doc));
 
   const onConnect = () => {
     setLoading(false);
@@ -90,10 +90,10 @@ export default function RoomContextProvider(props: {
   return (
     <RoomContext.Provider
       value={{
-        provider: provider,
-        name: name,
-        store: store,
-        currentUserId: currentUserId,
+        provider,
+        name,
+        store,
+        currentUserId,
       }}
     >
       {loading && <p>Loading...</p>}

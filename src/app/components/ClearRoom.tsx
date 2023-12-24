@@ -13,10 +13,13 @@ export default function ClearRoom() {
   const state = useSyncedStore(store);
 
   const handleClearRoom = () => {
+    if (!state) return;
     console.log("Clearing room");
     const messages = getYjsValue(state.messages) as Y.Array<Message>;
-    if (!messages) return;
     messages.delete(0, messages.length);
+    state.state.image = "";
+    state.state.isTyping = false;
+    state.state.imageDescriptionLoading = false;
     setShowConfirmation(false);
   };
 
